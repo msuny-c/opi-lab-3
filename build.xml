@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="lab3" default="build" basedir="." xmlns:ac="antlib:net.sf.antcontrib" xmlns:mvn="antlib:org.apache.maven.artifact.ant">
+    <!-- Load properties -->
+    <property file="build.properties"/>
+    <property name="maven.ant.tasks.jar" value="maven-ant-tasks-2.1.3.jar"/>
+    <property name="maven.ant.tasks.path" value="${lib.dir}/${maven.ant.tasks.jar}"/>
+    
+    <!-- Define additional tasks -->
+    <taskdef uri="antlib:net.sf.antcontrib" resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="${lib.dir}/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+    
+    <!-- Paths -->
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="**/*.jar"/>
+        <pathelement location="${jakarta.jakartaee.jar}"/>
+        <pathelement location="${hibernate.core.jar}"/>
+    </path>
+    
+    <path id="test.classpath">
+        <path refid="classpath"/>
+        <pathelement location="${classes.dir}"/>
+        <pathelement location="${test.classes.dir}"/>
+        <pathelement location="${junit.jar}"/>
+        <pathelement location="${hamcrest.jar}"/>
+    </path>
+    
+    <!-- Clean target -->
+    <target name="clean" description="Clean output directories">
+        <echo message="==================== Cleaning Project ===================="/>
+        <echo message="Deleting build directory: ${build.dir}"/>
+        <delete dir="${build.dir}"/>
+        <echo message="Deleting lib directory: ${lib.dir}"/>
+        <delete dir="${lib.dir}"/>
+        <echo message="Deleting target directory: ${target.dir}"/>
+        <delete dir="${target.dir}"/>
+        <echo message="==================== Clean Finished ===================="/>
+    </target>
+    
+    <!-- Compile target -->
+    <target name="compile" depends="install-libs, native2ascii" description="Compile source code">
+        <echo message="==================== Compiling Source ===================="/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false" failonerror="true">
+            <classpath refid="classpath"/>
+        </javac>
+        <echo message="Source compilation finished."/>
+        <echo message="==================== Compile Finished ===================="/>
+    </target>
+    
+    <!-- Native2ascii target -->
+    <target name="native2ascii" depends="install-libs" description="Convert native encoding to ASCII for resource bundles">
+        <delete dir="${localization.dir}/native2ascii"/>
+        <native2ascii src="${localization.dir}" 
+                      dest="${localization.dir}/native2ascii" 
+                      includes="**/*.properties" 
+                      ext=".properties"/>
+    </target>
+    
+    <!-- Compile tests target -->
+    <target name="compile-tests" depends="compile" description="Compile test source code">
+        <echo message="==================== Compiling Tests ===================="/>
+        <javac srcdir="${test.dir}" destdir="${test.classes.dir}" includeantruntime="false" failonerror="true">
+            <classpath refid="test.classpath"/>
+        </javac>
+        <echo message="Test compilation finished."/>
+        <echo message="==================== Tests Compiled ===================="/>
+    </target>
+    
+    <!-- Build target -->
+    <target name="build" depends="compile" description="Build the JAR file">
+        <echo message="==================== Building JAR ======================"/>
+        <mkdir dir="${src.resources.dir}/META-INF"/>
+        <jar destfile="${jar.dir}/${jar.name}" manifest="${manifest.file}">
+            <fileset dir="${classes.dir}"/>
+            <fileset dir="${src.resources.dir}"/>
+        </jar>
+        <echo message="JAR created: ${jar.dir}/${jar.name}"/>
+        <echo message="==================== JAR Build Finished ================"/>
+    </target>
+    
+    <!-- Test target -->
+    <target name="test" depends="build, compile-tests" description="Run tests">
+        <echo message="==================== Running Tests ===================="/>
+        <junit printsummary="yes" haltonfailure="yes" showoutput="false"> <!-- Added showoutput="false" to reduce verbosity -->
+            <classpath refid="test.classpath"/>
+            <formatter type="plain"/> <!-- Keep plain formatter for console summary -->
+            <formatter type="xml"/>
+            <batchtest fork="yes" todir="${reports.dir}">
+                <fileset dir="${test.dir}" includes="**/*Test.java"/>
+            </batchtest>
+        </junit>
+        <echo message="==================== Tests Finished ===================="/>
+    </target>
+    
+    <!-- Check if libs are already installed -->
+    <available file="${maven.ant.tasks.path}" property="libs.installed"/>
+
+    <!-- Install Libs target: Download dependencies using Maven (skipped if already installed) -->
+    <target name="install-libs" unless="libs.installed" description="Create directories and download project dependencies from pom.xml to lib directory">
+        <echo message="==================== Initializing and Installing Libraries ===================="/>
+        <echo message="Creating directories..."/>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${test.classes.dir}"/>
+        <mkdir dir="${jar.dir}"/>
+        <mkdir dir="${reports.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+        <mkdir dir="${test.dir}"/>
+        <mkdir dir="${test.resources.dir}"/>
+        <mkdir dir="${src.resources.dir}"/>
+        <mkdir dir="${localization.dir}"/>
+
+        <echo message="Downloading build tools (ant-contrib, maven-ant-tasks)..."/>
+        <!-- Download required build tool JARs first -->
+        <get src="https://repo1.maven.org/maven2/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3.jar"
+             dest="${lib.dir}/ant-contrib-1.0b3.jar"
+             skipexisting="true" quiet="true"/>
+        <get src="https://repo1.maven.org/maven2/org/apache/maven/maven-ant-tasks/2.1.3/maven-ant-tasks-2.1.3.jar"
+             dest="${maven.ant.tasks.path}"
+             skipexisting="true" quiet="true"/>
+             
+        <!-- Define Maven Ant Tasks here, after its JAR is downloaded -->
+        <taskdef uri="antlib:org.apache.maven.artifact.ant" resource="org/apache/maven/artifact/ant/antlib.xml">
+            <classpath>
+                <pathelement location="${maven.ant.tasks.path}"/>
+            </classpath>
+        </taskdef>
+        <echo message="Downloading dependencies defined in pom.xml to ${lib.dir}..."/>
+        <!-- Define a fileset containing the dependencies -->
+        <mvn:dependencies filesetId="dependency.fileset" useScope="test">
+            <pom file="pom.xml"/>
+        </mvn:dependencies>
+        <!-- Copy the files from the fileset to the lib directory -->
+        <copy todir="${lib.dir}" flatten="true" verbose="false">
+            <fileset refid="dependency.fileset"/>
+            <!-- Optional: Map artifact names if needed, flatten=true usually handles it -->
+        </copy>
+        <echo message="Dependencies downloaded to ${lib.dir}."/>
+        <echo message="==================== Libraries Installed ====================="/>
+    </target>
+
+    <!-- History target: Find last working commit and diff -->
+    <target name="history" description="Try compiling previous git revisions until success, then diff">
+        <echo message="==================== Starting History Build ===================="/>
+
+        <!-- Get the current commit hash BEFORE starting the loop -->
+        <exec executable="git" outputproperty="initial.commit.hash.raw" failonerror="true">
+            <arg value="rev-parse"/>
+            <arg value="HEAD"/>
+        </exec>
+        <!-- Trim potential whitespace/newlines from the output -->
+        <property name="initial.commit.hash" value="${initial.commit.hash.raw}"/>
+        <echo message="Starting history check from initial commit: ${initial.commit.hash}"/>
+
+        <!-- Get list of all commit hashes in reverse chronological order -->
+        <exec executable="git" outputproperty="commit.list.raw" failonerror="true">
+            <arg value="log"/>
+            <arg value="--pretty=format:%H"/>
+        </exec>
+        <!-- Ensure cross-platform line endings are handled by replacing them -->
+        <!-- Use propertyregex to replace newlines (CRLF or LF) with spaces -->
+        <ac:propertyregex property="commit.list"
+                          input="${commit.list.raw}"
+                          regexp="(\r?\n)+"
+                          replace=" "
+                          global="true"/>
+
+
+        <ac:var name="last.working.commit" value=""/>
+        <ac:var name="failing.commit" value=""/>
+        <!-- <property name="initial.commit.hash" value=""/>  Removed, set before loop -->
+        <ac:var name="found.working" value="false"/> <!-- Flag to break loop -->
+
+        <!-- Use 'for' loop from ant-contrib -->
+        <ac:for list="${commit.list}" param="commit.hash" delimiter=" ">
+            <sequential>
+                <!-- Break condition -->
+                <ac:if>
+                    <istrue value="${found.working}"/>
+                    <then><ac:break/></then>
+                </ac:if>
+
+                <!-- Removed in-loop setting of initial.commit.hash -->
+
+                <!-- Checkout the specific commit -->
+                <echo message="Checking out commit: @{commit.hash}"/>
+                <exec executable="git" failonerror="true">
+                    <arg value="checkout"/>
+                    <arg value="@{commit.hash}"/>
+                </exec>
+                <!-- Clean previous build artifacts before trying to compile -->
+                <antcall target="clean"/>
+
+                <!-- Try to compile -->
+                <ac:trycatch property="compile.error.@{commit.hash}" reference="compile.exception.@{commit.hash}">
+                    <try>
+                        <antcall target="compile"/>
+                        <!-- Compile succeeded -->
+                        <echo message="Commit @{commit.hash} compiled successfully."/>
+                        <!-- Store this as the last working commit and set flag to break the loop -->
+                        <ac:var name="last.working.commit" value="@{commit.hash}"/>
+                        <ac:var name="found.working" value="true"/>
+                    </try>
+                    <catch>
+                        <!-- Compile failed -->
+                        <echo message="Compile failed for commit: @{commit.hash}"/>
+                        <!-- Store this as the potential failing commit -->
+                        <ac:var name="failing.commit" value="@{commit.hash}"/>
+                    </catch>
+                </ac:trycatch>
+            </sequential>
+        </ac:for>
+
+        <!-- Post-loop processing: Check the found.working flag -->
+        <ac:if>
+            <istrue value="${found.working}"/>
+            <then>
+                 <echo message="Last working commit found: ${last.working.commit}"/>
+                 <ac:if>
+                      <!-- Check if the working commit is the same as the initial one -->
+                      <equals arg1="${last.working.commit}" arg2="${initial.commit.hash}"/>
+                      <then>
+                           <echo message="The initial commit ${initial.commit.hash} was the first working commit found. No diff needed."/>
+                      </then>
+                      <else>
+                          <!-- If a working commit was found, and it's not the initial one,
+                               then 'failing.commit' holds the hash of the commit immediately
+                               after the working one that was attempted in the loop. -->
+                          <echo message="Generating diff between working commit ${last.working.commit} and next commit ${failing.commit}..."/>
+                          <exec executable="git" output="diff.log" failonerror="true">
+                              <arg value="diff"/>
+                              <arg value="${last.working.commit}"/>
+                              <arg value="${failing.commit}"/>
+                          </exec>
+                          <echo message="Diff saved to diff.log"/>
+                      </else>
+                 </ac:if>
+            </then>
+            <else>
+                 <echo message="Could not find a working commit in the Git history."/>
+            </else>
+        </ac:if>
+
+        <!-- Checkout the original commit we started with -->
+        <ac:if>
+            <isset property="initial.commit.hash"/>
+            <then>
+                <echo message="Checking out original commit: ${initial.commit.hash}"/>
+                <exec executable="git" failonerror="true">
+                    <arg value="checkout"/>
+                    <arg value="${initial.commit.hash}"/>
+                </exec>
+            </then>
+            <else>
+                <echo message="Warning: Could not determine initial commit hash to checkout."/>
+            </else>
+        </ac:if>
+
+        <echo message="==================== History Build Finished ===================="/>
+    </target>
+</project>
