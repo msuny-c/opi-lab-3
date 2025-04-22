@@ -42,18 +42,16 @@ public class ScaleValidatorTest {
             }
         };
         validator.initialize(annotation);
-        context = null; // Not needed for testing
+        context = null;
     }
 
     @Test
     public void testValidScale() {
-        // Double with one decimal place should be valid
         assertTrue(validator.isValid(1.0, context));
     }
 
     @Test
     public void testInvalidScale() {
-        // Double with two decimal places should be invalid
         assertFalse(validator.isValid(1.23, context));
     }
 } 

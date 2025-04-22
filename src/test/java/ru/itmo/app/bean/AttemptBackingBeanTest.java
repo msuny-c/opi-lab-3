@@ -15,7 +15,6 @@ public class AttemptBackingBeanTest {
 
     @Test
     public void testDefaultValues() {
-        // Default values should be initialized as defined in the class
         assertEquals(0.0, bean.getX(), 0.001);
         assertEquals(0.0, bean.getY(), 0.001);
         assertEquals(0.0, bean.getR(), 0.001);

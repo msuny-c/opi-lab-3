@@ -5,14 +5,12 @@
     <property name="maven.ant.tasks.jar" value="maven-ant-tasks-2.1.3.jar"/>
     <property name="maven.ant.tasks.path" value="${lib.dir}/${maven.ant.tasks.jar}"/>
     
-    <!-- Define additional tasks -->
     <taskdef uri="antlib:net.sf.antcontrib" resource="net/sf/antcontrib/antlib.xml">
         <classpath>
             <pathelement location="${lib.dir}/ant-contrib-1.0b3.jar"/>
         </classpath>
     </taskdef>
     
-    <!-- Paths -->
     <path id="classpath">
         <fileset dir="${lib.dir}" includes="**/*.jar"/>
         <pathelement location="${jakarta.jakartaee.jar}"/>
@@ -135,7 +133,6 @@
         <!-- Copy the files from the fileset to the lib directory -->
         <copy todir="${lib.dir}" flatten="true" verbose="false">
             <fileset refid="dependency.fileset"/>
-            <!-- Optional: Map artifact names if needed, flatten=true usually handles it -->
         </copy>
         <echo message="Dependencies downloaded to ${lib.dir}."/>
         <echo message="==================== Libraries Installed ====================="/>
@@ -159,8 +156,6 @@
             <arg value="log"/>
             <arg value="--pretty=format:%H"/>
         </exec>
-        <!-- Ensure cross-platform line endings are handled by replacing them -->
-        <!-- Use propertyregex to replace newlines (CRLF or LF) with spaces -->
         <ac:propertyregex property="commit.list"
                           input="${commit.list.raw}"
                           regexp="(\r?\n)+"
@@ -170,7 +165,6 @@
 
         <ac:var name="last.working.commit" value=""/>
         <ac:var name="failing.commit" value=""/>
-        <!-- <property name="initial.commit.hash" value=""/>  Removed, set before loop -->
         <ac:var name="found.working" value="false"/> <!-- Flag to break loop -->
 
         <!-- Use 'for' loop from ant-contrib -->
@@ -181,8 +175,6 @@
                     <istrue value="${found.working}"/>
                     <then><ac:break/></then>
                 </ac:if>
-
-                <!-- Removed in-loop setting of initial.commit.hash -->
 
                 <!-- Checkout the specific commit -->
                 <echo message="Checking out commit: @{commit.hash}"/>
