@@ -67,7 +67,7 @@
     </target>
     
     <!-- Build target -->
-    <target name="build" depends="compile" description="Build the JAR file">
+    <target name="build" depends="test" description="Build the JAR file">
         <echo message="==================== Building JAR ======================"/>
         <mkdir dir="${src.resources.dir}/META-INF"/>
         <jar destfile="${jar.dir}/${jar.name}" manifest="${manifest.file}">
@@ -79,7 +79,7 @@
     </target>
     
     <!-- Test target -->
-    <target name="test" depends="build, compile-tests" description="Run tests">
+    <target name="test" depends="compile-tests" description="Run tests">
         <echo message="==================== Running Tests ===================="/>
         <junit printsummary="yes" haltonfailure="yes" showoutput="false"> <!-- Added showoutput="false" to reduce verbosity -->
             <classpath refid="test.classpath"/>
